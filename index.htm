@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAX函数查询系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #a18cd1, #fbc2eb); /* 浅紫色到浅蓝色渐变 */
+            color: #333; /* 文字颜色调整为深色 */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9); /* 容器背景为白色半透明 */
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* 添加阴影效果 */
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333; /* 标题颜色调整为深色 */
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 300px;
+            font-size: 16px;
+        }
+        input {
+            background: #f1f1f1; /* 输入框背景为浅灰色 */
+        }
+        button {
+            background: #6a11cb; /* 按钮背景为紫色 */
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #2575fc; /* 按钮悬停时为蓝色 */
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); /* 弹窗背景为白色 */
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            color: #333; /* 弹窗文字颜色为深色 */
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* 弹窗阴影 */
+        }
+        .modal-content {
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            background: #6a11cb; /* 关闭按钮背景为紫色 */
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            transition: background 0.3s ease;
+        }
+        .close:hover {
+            background: #2575fc; /* 关闭按钮悬停时为蓝色 */
+        }
+        #randomResult {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #333; /* 随机结果显示文字颜色为深色 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DAX函数查询系统</h1>
+        <input type="text" id="searchInput" placeholder="输入DAX函数名称" list="daxFunctions">
+        <datalist id="daxFunctions">
+            <!-- DAX函数列表 -->
+            <option value="SUM">
+            <option value="AVERAGE">
+            <option value="CALCULATE">
+            <option value="FILTER">
+            <option value="ALL">
+            <option value="RELATED">
+            <option value="COUNT">
+            <option value="DISTINCT">
+            <option value="MAX">
+            <option value="MIN">
+            <!-- 更多DAX函数可以继续添加 -->
+        </datalist>
+        <button onclick="searchFunction()">搜索</button>
+        <button onclick="startRandom()">随机抽查</button>
+        <button onclick="pauseRandom()">暂停</button>
+        <div id="randomResult"></div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2>
+            <p id="modalDescription"></p>
+            <p><strong>语法:</strong> <span id="modalSyntax"></span></p>
+            <p><strong>使用场景:</strong> <span id="modalUsage"></span></p>
+            <button class="close" onclick="closeModal()">关闭弹窗</button>
+        </div>
+    </div>
+
+    <script>
+        const daxFunctions = {
+            "SUM": {
+                description: "计算一列数字的总和。",
+                syntax: "SUM(column)",
+                usage: "用于对某一列的值进行求和。"
+            },
+            "AVERAGE": {
+                description: "计算一列数字的平均值。",
+                syntax: "AVERAGE(column)",
+                usage: "用于计算某一列的平均值。"
+            },
+            "CALCULATE": {
+                description: "在指定的筛选条件下计算表达式。",
+                syntax: "CALCULATE(expression, filter1, filter2, ...)",
+                usage: "用于在特定条件下重新计算表达式。"
+            },
+            "FILTER": {
+                description: "返回满足指定条件的表。",
+                syntax: "FILTER(table, condition)",
+                usage: "用于筛选表中的行。"
+            },
+            "ALL": {
+                description: "移除所有筛选器，返回表中的所有行。",
+                syntax: "ALL(table)",
+                usage: "用于忽略当前筛选器，返回完整表。"
+            },
+            "RELATED": {
+                description: "从相关表中获取相关值。",
+                syntax: "RELATED(column)",
+                usage: "用于从关联表中提取数据。"
+            },
+            "COUNT": {
+                description: "计算一列中的行数。",
+                syntax: "COUNT(column)",
+                usage: "用于统计某一列的行数。"
+            },
+            "DISTINCT": {
+                description: "返回一列中的唯一值。",
+                syntax: "DISTINCT(column)",
+                usage: "用于获取某一列的唯一值列表。"
+            },
+            "MAX": {
+                description: "返回一列中的最大值。",
+                syntax: "MAX(column)",
+                usage: "用于获取某一列的最大值。"
+            },
+            "MIN": {
+                description: "返回一列中的最小值。",
+                syntax: "MIN(column)",
+                usage: "用于获取某一列的最小值。"
+            }
+            // 更多DAX函数可以继续添加
+        };
+
+        let randomInterval;
+
+        function searchFunction() {
+            const input = document.getElementById("searchInput").value.toUpperCase();
+            if (daxFunctions[input]) {
+                showModal(input);
+            } else {
+                alert("未找到该函数，请检查输入是否正确。");
+            }
+        }
+
+        function startRandom() {
+            clearInterval(randomInterval);
+            randomInterval = setInterval(() => {
+                const functions = Object.keys(daxFunctions);
+                const randomFunction = functions[Math.floor(Math.random() * functions.length)];
+                document.getElementById("randomResult").textContent = randomFunction;
+            }, 100);
+        }
+
+        function pauseRandom() {
+            clearInterval(randomInterval);
+            const currentFunction = document.getElementById("randomResult").textContent;
+            if (currentFunction) {
+                showModal(currentFunction);
+            }
+        }
+
+        function showModal(func) {
+            const modal = document.getElementById("modal");
+            const details = daxFunctions[func];
+            document.getElementById("modalTitle").textContent = func;
+            document.getElementById("modalDescription").textContent = details.description;
+            document.getElementById("modalSyntax").textContent = details.syntax;
+            document.getElementById("modalUsage").textContent = details.usage;
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+        }
+    </script>
+</body>
+</html>
